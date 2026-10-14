@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="color-scheme" content="light dark" />
+    <meta
+      name="description"
+      content="Portafolio de Néstor Sarmiento, estudiante de Ingeniería en Software (EPN) con experiencia en desarrollo backend con Python, FastAPI y Java, automatización con n8n e IA aplicada."
+    />
+    <meta property="og:title" content="Néstor Sarmiento · Ingeniería en Software" />
+    <meta
+      property="og:description"
+      content="Desarrollo backend, APIs REST, automatización e inteligencia artificial aplicada."
+    />
+    <meta
+      property="og:image"
+      content="https://nestor-sarmiento.github.io/firstdesign.portafolio/nestor-sarmiento.jpg"
+    />
+    <title>Néstor Sarmiento · Ingeniería en Software</title>
+    <style>
+      html { background: #f7f8fb; }
+      html[data-theme='dark'] { background: #0a0c12; }
+    </style>
+    <script>
+      try {
+        const saved = localStorage.getItem('theme')
+        const theme =
+          saved === 'light' || saved === 'dark'
+            ? saved
+            : matchMedia('(prefers-color-scheme: dark)').matches
+              ? 'dark'
+              : 'light'
+        document.documentElement.dataset.theme = theme
+      } catch (_) {}
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <noscript>
+      Este portafolio necesita JavaScript. Puedes descargar el CV directamente en
+      <a href="CV-Nestor-Sarmiento.pdf">CV-Nestor-Sarmiento.pdf</a>.
+    </noscript>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
