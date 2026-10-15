@@ -1,12 +1,14 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   BriefcaseBusiness,
   CircleHelp,
   Code2,
   Copy,
   Download,
+  Eye,
   GraduationCap,
   House,
+  Languages,
   Mail,
   Monitor,
   Moon,
@@ -24,10 +26,13 @@ import { BackToTop, Footer, WhatsAppButton } from './components/Footer'
 import { CommandPalette } from './components/CommandPalette'
 import type { Command } from './components/CommandPalette'
 import { HelpDialog } from './components/HelpDialog'
+import { CvPreviewDialog } from './components/CvPreviewDialog'
 import { GitHubIcon, LinkedInIcon, WhatsAppIcon } from './components/Icons'
 import { useToast } from './components/toast-context'
-import { contact, profile, sections } from './data/cv'
+import { contact, getSections, person, sectionIds } from './data/cv'
 import type { SectionId } from './data/cv'
+import { useContent, useLanguage, useUi } from './i18n/context'
+import { ui as dictionary } from './i18n/ui'
 import { useTheme } from './hooks/useTheme'
 import { scrollToSection, useScrollProgress, useScrollSpy } from './hooks/useScroll'
 import { useReveal } from './hooks/useReveal'
@@ -35,7 +40,7 @@ import { copyText } from './lib/clipboard'
 import { isTypingTarget } from './lib/platform'
 import './App.css'
 
-const sectionIds = sections.map((s) => s.id)
+const spyIds = [...sectionIds]
 
 const sectionIcons = {
   inicio: House,
@@ -48,22 +53,37 @@ const sectionIcons = {
 
 export default function App() {
   const notify = useToast()
+  const { lang, setLang } = useLanguage()
+  const ui = useUi()
+  const content = useContent()
+  const sections = useMemo(() => getSections(content), [content])
   const { theme, followsSystem, toggle, followSystem } = useTheme()
-  const active = useScrollSpy(sectionIds) as SectionId
+  const active = useScrollSpy(spyIds) as SectionId
   const { progress, scrolled } = useScrollProgress()
   const [paletteOpen, setPaletteOpen] = useState(false)
   const [helpOpen, setHelpOpen] = useState(false)
+  const [cvOpen, setCvOpen] = useState(false)
+  const hashChecked = useRef(false)
   useReveal()
 
   const closePalette = useCallback(() => setPaletteOpen(false), [])
   const closeHelp = useCallback(() => setHelpOpen(false), [])
+  const closeCv = useCallback(() => setCvOpen(false), [])
 
   const toggleTheme = useCallback(() => {
     const next = toggle()
-    notify({ message: `Tema ${next === 'dark' ? 'oscuro' : 'claro'} activado`, description: 'Presiona T para volver a cambiarlo.' })
-  }, [toggle, notify])
+    notify({ message: ui.toasts.themeOn(next === 'dark'), description: ui.toasts.themeHint })
+  }, [toggle, notify, ui])
+
+  const toggleLang = useCallback(() => {
+    const next = lang === 'es' ? 'en' : 'es'
+    setLang(next)
+    notify({ message: dictionary[next].toasts.language, description: dictionary[next].toasts.languageHint })
+  }, [lang, setLang, notify])
 
   useEffect(() => {
+    if (hashChecked.current) return
+    hashChecked.current = true
     const hash = decodeURIComponent(location.hash.slice(1))
     if (!hash) return
     if (sectionIds.includes(hash as SectionId)) {
@@ -72,32 +92,38 @@ export default function App() {
       history.replaceState(null, '', location.pathname)
       notify({
         tone: 'error',
-        message: `La sección “#${hash}” no existe`,
-        description: 'Te dejamos en el inicio. Usa el menú o presiona ? para ver todas las secciones.',
+        message: ui.toasts.hashMissing(hash),
+        description: ui.toasts.hashMissingDesc,
         duration: 7000,
       })
     }
-  }, [notify])
+  }, [notify, ui])
 
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
       if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
         event.preventDefault()
         setHelpOpen(false)
+        setCvOpen(false)
         setPaletteOpen((open) => !open)
         return
       }
-      if (paletteOpen || helpOpen || event.metaKey || event.ctrlKey || event.altKey) return
+      if (paletteOpen || helpOpen || cvOpen || event.metaKey || event.ctrlKey || event.altKey) return
       if (isTypingTarget(event.target)) return
 
+      const key = event.key.toLowerCase()
       if (event.key === '/') {
         event.preventDefault()
         setPaletteOpen(true)
       } else if (event.key === '?') {
         event.preventDefault()
         setHelpOpen(true)
-      } else if (event.key.toLowerCase() === 't') {
+      } else if (key === 't') {
         toggleTheme()
+      } else if (key === 'l') {
+        toggleLang()
+      } else if (key === 'v') {
+        setCvOpen(true)
       } else {
         const section = sections.find((s) => s.shortcut === event.key)
         if (section) scrollToSection(section.id)
@@ -105,85 +131,105 @@ export default function App() {
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [paletteOpen, helpOpen, toggleTheme])
+  }, [paletteOpen, helpOpen, cvOpen, toggleTheme, toggleLang, sections])
 
   const commands = useMemo<Command[]>(() => {
+    const c = ui.palette.commands
+    const k = ui.palette.keywords
     const nav: Command[] = sections.map((s) => ({
       id: `go-${s.id}`,
-      label: `Ir a ${s.label}`,
-      group: 'Navegación',
+      label: c.goTo(s.label),
+      group: 'nav',
       icon: sectionIcons[s.id],
       shortcut: s.shortcut,
-      keywords: s.id === 'formacion' ? 'educacion estudios certificaciones universidad' : s.id === 'contacto' ? 'mensaje escribir' : '',
+      keywords: s.id === 'formacion' ? k.formacion : s.id === 'contacto' ? k.contacto : '',
       run: () => scrollToSection(s.id),
     }))
     return [
       ...nav,
       {
         id: 'copy-email',
-        label: 'Copiar correo electrónico',
-        group: 'Acciones',
+        label: c.copyEmail,
+        group: 'actions',
         icon: Copy,
-        keywords: `email mail ${contact.email}`,
+        keywords: `${k.email} ${contact.email}`,
         run: async () => {
           const ok = await copyText(contact.email)
           notify(
             ok
-              ? { tone: 'success', message: 'Correo copiado', description: contact.email }
+              ? { tone: 'success', message: ui.toasts.emailCopied, description: contact.email }
               : {
                   tone: 'error',
-                  message: 'No se pudo copiar el correo',
-                  description: `Cópialo manualmente: ${contact.email}`,
+                  message: ui.toasts.emailCopyFailed,
+                  description: ui.toasts.copyManually(contact.email),
                   duration: 8000,
                 },
           )
         },
       },
       {
+        id: 'preview-cv',
+        label: c.previewCv,
+        group: 'actions',
+        icon: Eye,
+        shortcut: 'V',
+        keywords: k.preview,
+        run: () => setCvOpen(true),
+      },
+      {
         id: 'download-cv',
-        label: 'Descargar CV en PDF',
-        group: 'Acciones',
+        label: c.downloadCv,
+        group: 'actions',
         icon: Download,
-        keywords: 'curriculum hoja de vida pdf',
+        keywords: k.cv,
         run: () => {
           const link = document.createElement('a')
-          link.href = profile.cv.href
-          link.download = profile.cv.fileName
+          link.href = person.cv.href
+          link.download = person.cv.fileName
           link.click()
-          notify({ tone: 'success', message: 'Descarga iniciada', description: profile.cv.fileName })
+          notify({ tone: 'success', message: ui.hero.downloadStarted, description: person.cv.fileName })
         },
       },
       {
         id: 'open-whatsapp',
-        label: 'Escribir por WhatsApp',
-        group: 'Enlaces',
+        label: c.whatsapp,
+        group: 'links',
         icon: WhatsAppIcon,
-        keywords: `chat mensaje celular telefono ${contact.whatsapp.display}`,
-        run: () => window.open(contact.whatsapp.href, '_blank', 'noreferrer'),
+        keywords: `${k.whatsapp} ${contact.whatsapp.display}`,
+        run: () => window.open(contact.whatsapp.href(ui.footer.whatsappMessage), '_blank', 'noreferrer'),
       },
       {
         id: 'open-linkedin',
-        label: 'Abrir LinkedIn',
-        group: 'Enlaces',
+        label: c.linkedin,
+        group: 'links',
         icon: LinkedInIcon,
-        keywords: 'perfil red social',
+        keywords: k.linkedin,
         run: () => window.open(contact.linkedin.href, '_blank', 'noreferrer'),
       },
       {
         id: 'open-github',
-        label: 'Abrir GitHub',
-        group: 'Enlaces',
+        label: c.github,
+        group: 'links',
         icon: GitHubIcon,
-        keywords: 'repositorios codigo proyectos',
+        keywords: k.github,
         run: () => window.open(contact.github.href, '_blank', 'noreferrer'),
       },
       {
+        id: 'toggle-language',
+        label: c.language,
+        group: 'prefs',
+        icon: Languages,
+        shortcut: 'L',
+        keywords: k.language,
+        run: toggleLang,
+      },
+      {
         id: 'toggle-theme',
-        label: theme === 'dark' ? 'Cambiar a tema claro' : 'Cambiar a tema oscuro',
-        group: 'Preferencias',
+        label: theme === 'dark' ? c.themeLight : c.themeDark,
+        group: 'prefs',
         icon: theme === 'dark' ? Sun : Moon,
         shortcut: 'T',
-        keywords: 'tema modo oscuro claro dark light',
+        keywords: k.theme,
         run: toggleTheme,
       },
       ...(followsSystem
@@ -191,32 +237,32 @@ export default function App() {
         : [
             {
               id: 'system-theme',
-              label: 'Usar el tema del sistema',
-              group: 'Preferencias' as const,
+              label: c.systemTheme,
+              group: 'prefs' as const,
               icon: Monitor,
-              keywords: 'tema automatico sistema',
+              keywords: k.system,
               run: () => {
                 followSystem()
-                notify({ message: 'El tema ahora sigue la configuración de tu sistema' })
+                notify({ message: ui.toasts.systemTheme })
               },
             },
           ]),
       {
         id: 'help',
-        label: 'Ver ayuda y atajos',
-        group: 'Preferencias',
+        label: c.help,
+        group: 'prefs',
         icon: CircleHelp,
         shortcut: '?',
-        keywords: 'ayuda atajos teclado documentacion heuristicas nielsen',
+        keywords: k.help,
         run: () => setHelpOpen(true),
       },
     ]
-  }, [theme, followsSystem, followSystem, toggleTheme, notify])
+  }, [ui, sections, theme, followsSystem, followSystem, toggleTheme, toggleLang, notify])
 
   return (
     <>
       <a href="#main" className="skip-link">
-        Saltar al contenido
+        {ui.common.skipToContent}
       </a>
       <Header
         active={active}
@@ -224,11 +270,12 @@ export default function App() {
         scrolled={scrolled}
         theme={theme}
         onToggleTheme={toggleTheme}
+        onToggleLang={toggleLang}
         onOpenPalette={() => setPaletteOpen(true)}
         onOpenHelp={() => setHelpOpen(true)}
       />
       <main id="main" tabIndex={-1}>
-        <Hero />
+        <Hero onPreviewCv={() => setCvOpen(true)} />
         <About />
         <Experience />
         <Skills />
@@ -240,6 +287,7 @@ export default function App() {
       <BackToTop visible={progress > 0.12} />
       <CommandPalette open={paletteOpen} onClose={closePalette} commands={commands} />
       <HelpDialog open={helpOpen} onClose={closeHelp} />
+      <CvPreviewDialog open={cvOpen} onClose={closeCv} />
     </>
   )
 }

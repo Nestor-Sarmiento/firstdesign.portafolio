@@ -4,11 +4,12 @@ import { CornerDownLeft, Search, SearchX } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { Dialog } from './Dialog'
 import { normalize } from '../lib/format'
+import { useUi } from '../i18n/context'
 
 export type Command = {
   id: string
   label: string
-  group: 'Navegación' | 'Acciones' | 'Enlaces' | 'Preferencias'
+  group: 'nav' | 'actions' | 'links' | 'prefs'
   icon: LucideIcon | ((props: { size?: number }) => ReactElement)
   keywords?: string
   shortcut?: string
@@ -21,9 +22,8 @@ type Props = {
   commands: Command[]
 }
 
-const SUGGESTIONS = ['experiencia', 'correo', 'cv', 'tema']
-
 export function CommandPalette({ open, onClose, commands }: Props) {
+  const title = useUi().palette.title
   const pending = useRef<(() => void) | null>(null)
 
   const handleClosed = () => {
@@ -37,7 +37,7 @@ export function CommandPalette({ open, onClose, commands }: Props) {
     <Dialog
       open={open}
       onClose={handleClosed}
-      title="Paleta de comandos"
+      title={title}
       className="dialog--palette"
       hideHeader
     >
@@ -59,6 +59,7 @@ function PaletteBody({
   commands: Command[]
   onRun: (command: Command) => void
 }) {
+  const t = useUi().palette
   const [query, setQuery] = useState('')
   const [activeIndex, setActiveIndex] = useState(0)
   const listId = useId()
@@ -69,10 +70,10 @@ function PaletteBody({
     if (!q) return commands
     const terms = q.split(/\s+/)
     return commands.filter((c) => {
-      const haystack = normalize(`${c.label} ${c.group} ${c.keywords ?? ''}`)
-      return terms.every((t) => haystack.includes(t))
+      const haystack = normalize(`${c.label} ${t.groups[c.group]} ${c.keywords ?? ''}`)
+      return terms.every((term) => haystack.includes(term))
     })
-  }, [commands, query])
+  }, [commands, query, t])
 
   const safeIndex = Math.min(activeIndex, Math.max(0, results.length - 1))
 
@@ -114,8 +115,8 @@ function PaletteBody({
           aria-expanded="true"
           aria-controls={listId}
           aria-activedescendant={results.length ? `${listId}-${safeIndex}` : undefined}
-          aria-label="Buscar una sección o acción"
-          placeholder="Busca una sección o acción…"
+          aria-label={t.aria}
+          placeholder={t.placeholder}
           value={query}
           onChange={(e) => {
             setQuery(e.target.value)
@@ -137,7 +138,7 @@ function PaletteBody({
               <li key={command.id} role="presentation">
                 {showGroup && (
                   <div className="palette__group" role="presentation">
-                    {command.group}
+                    {t.groups[command.group]}
                   </div>
                 )}
                 <div
@@ -164,11 +165,11 @@ function PaletteBody({
         <div className="palette__empty" role="status">
           <SearchX size={28} aria-hidden="true" />
           <p>
-            No encontramos resultados para <strong>“{query}”</strong>.
+            {t.noResults} <strong>“{query}”</strong>.
           </p>
-          <p className="muted">Revisa la ortografía o prueba con:</p>
+          <p className="muted">{t.tryWith}</p>
           <div className="palette__suggestions">
-            {SUGGESTIONS.map((s) => (
+            {t.suggestions.map((s) => (
               <button
                 key={s}
                 type="button"
@@ -188,13 +189,13 @@ function PaletteBody({
       <footer className="palette__footer" aria-hidden="true">
         <span>
           <kbd className="kbd">↑</kbd>
-          <kbd className="kbd">↓</kbd> para moverte
+          <kbd className="kbd">↓</kbd> {t.move}
         </span>
         <span>
-          <kbd className="kbd">Enter</kbd> para elegir
+          <kbd className="kbd">Enter</kbd> {t.choose}
         </span>
         <span>
-          <kbd className="kbd">Esc</kbd> para cerrar
+          <kbd className="kbd">Esc</kbd> {t.close}
         </span>
       </footer>
     </div>

@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react'
 import type { ReactNode } from 'react'
 import { X } from 'lucide-react'
+import { useUi } from '../i18n/context'
 
 type DialogProps = {
   open: boolean
@@ -21,6 +22,7 @@ export function Dialog({
   hideHeader,
   children,
 }: DialogProps) {
+  const closeLabel = useUi().common.closeEsc
   const ref = useRef<HTMLDialogElement>(null)
   const returnFocus = useRef<HTMLElement | null>(null)
 
@@ -68,8 +70,8 @@ export function Dialog({
               type="button"
               className="icon-btn"
               onClick={() => ref.current?.close()}
-              aria-label="Cerrar (Esc)"
-              title="Cerrar (Esc)"
+              aria-label={closeLabel}
+              title={closeLabel}
             >
               <X size={20} aria-hidden="true" />
             </button>

@@ -446,6 +446,38 @@
   gap: 0.2rem;
 }
 
+.lang-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  height: 40px;
+  padding: 0 0.7rem;
+  border: 1px solid transparent;
+  border-radius: 12px;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  transition: background-color var(--dur) var(--ease), color var(--dur) var(--ease);
+}
+
+.lang-btn:hover {
+  background: var(--surface-2);
+  color: var(--text);
+}
+
+@media (max-width: 480px) {
+  .brand__text,
+  .lang-btn svg {
+    display: none;
+  }
+
+  .lang-btn {
+    padding: 0 0.6rem;
+  }
+}
+
 .menu-toggle {
   display: none;
 }
@@ -924,7 +956,7 @@
 
 .capabilities {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 1rem;
 }
 
@@ -1016,6 +1048,17 @@
 .timeline__item + .timeline__item .timeline__dot {
   background: var(--surface);
   box-shadow: 0 0 0 1px var(--border-strong);
+}
+
+.timeline__item.is-current .timeline__dot {
+  background: var(--success);
+  box-shadow: 0 0 0 4px var(--success-soft);
+}
+
+.job__badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
 }
 
 .job {
@@ -1387,6 +1430,36 @@
 .edu-card__inst {
   margin-top: 0.2rem;
   color: var(--text-muted);
+}
+
+.edu-card__detail {
+  margin-top: 0.6rem;
+  font-size: 0.95rem;
+}
+
+.semester-bar {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 1fr;
+  gap: 4px;
+  margin-top: 0.85rem;
+}
+
+.semester-bar__step {
+  height: 6px;
+  border-radius: 999px;
+  background: var(--surface-2);
+  box-shadow: inset 0 0 0 1px var(--border);
+}
+
+.semester-bar__step.is-done {
+  background: var(--gradient);
+  box-shadow: none;
+}
+
+.semester-bar__step.is-current {
+  background: var(--success);
+  box-shadow: none;
 }
 
 @media (max-width: 760px) {
@@ -1986,6 +2059,144 @@
 
 .dialog--help {
   width: min(760px, calc(100vw - 2rem));
+}
+
+.dialog__footer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem 1rem;
+  padding: 0.9rem 1.5rem;
+  border-top: 1px solid var(--border);
+}
+
+.dialog__footer-note {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  color: var(--text-muted);
+  font-size: 0.9rem;
+}
+
+.dialog__footer-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-left: auto;
+}
+
+/* ---------- CV preview ---------- */
+
+.dialog--cv {
+  width: min(860px, calc(100vw - 2rem));
+  max-height: min(92vh, 1100px);
+}
+
+.cv-preview__body {
+  padding: 1.25rem 1.5rem;
+  background: var(--surface-2);
+  border-top: 1px solid var(--border);
+}
+
+.cv-preview__page {
+  position: relative;
+  max-width: 780px;
+  margin: 0 auto;
+  aspect-ratio: 800 / 1131;
+  overflow: hidden;
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  box-shadow: var(--shadow-lg);
+}
+
+.cv-preview__page img {
+  display: block;
+  width: 100%;
+  height: auto;
+  opacity: 0;
+  transition: opacity 240ms var(--ease);
+}
+
+.cv-preview__page.is-loaded {
+  background: #fff;
+}
+
+.cv-preview__page.is-loaded img {
+  opacity: 1;
+}
+
+.cv-preview__loading {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6rem;
+  color: var(--text-muted);
+}
+
+.cv-preview__error {
+  display: grid;
+  justify-items: center;
+  gap: 0.5rem;
+  padding: 3rem 1rem;
+  text-align: center;
+  color: var(--text-muted);
+}
+
+.cv-preview__error > svg {
+  color: var(--danger);
+}
+
+.cv-preview__error .btn {
+  margin-top: 0.5rem;
+}
+
+.spin {
+  animation: spin 900ms linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.label-short {
+  display: none;
+}
+
+@media (max-width: 640px) {
+  .cv-preview__body {
+    padding: 0.75rem;
+  }
+
+  .dialog__footer {
+    padding: 0.75rem;
+  }
+
+  .dialog__footer-actions {
+    width: 100%;
+    flex-wrap: nowrap;
+  }
+
+  .dialog__footer-actions .btn {
+    flex: 1 1 0;
+  }
+
+  .label-long {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  .label-short {
+    display: inline;
+  }
 }
 
 .tabs {

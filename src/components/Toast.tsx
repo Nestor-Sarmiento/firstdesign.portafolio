@@ -3,12 +3,14 @@ import type { ReactNode } from 'react'
 import { AlertCircle, CheckCircle2, Info, X } from 'lucide-react'
 import { ToastContext } from './toast-context'
 import type { ToastInput, Tone } from './toast-context'
+import { useUi } from '../i18n/context'
 
 type ToastItem = ToastInput & { id: number; tone: Tone }
 
 const icons = { success: CheckCircle2, error: AlertCircle, info: Info }
 
 export function ToastProvider({ children }: { children: ReactNode }) {
+  const t = useUi().common
   const [toasts, setToasts] = useState<ToastItem[]>([])
   const nextId = useRef(0)
 
@@ -32,7 +34,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   return (
     <ToastContext.Provider value={value}>
       {children}
-      <div className="toast-region" role="region" aria-label="Notificaciones">
+      <div className="toast-region" role="region" aria-label={t.notifications}>
         <ol aria-live="polite" aria-relevant="additions">
           {toasts.map((toast) => {
             const Icon = icons[toast.tone]
@@ -59,7 +61,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
                   type="button"
                   className="icon-btn icon-btn--sm"
                   onClick={() => dismiss(toast.id)}
-                  aria-label="Cerrar notificación"
+                  aria-label={t.closeNotification}
                 >
                   <X size={16} aria-hidden="true" />
                 </button>

@@ -2,32 +2,32 @@ import { useState } from 'react'
 import { Compass, Keyboard, Lightbulb } from 'lucide-react'
 import { Dialog } from './Dialog'
 import { heuristics } from '../data/heuristics'
-import { sections } from '../data/cv'
+import { getSections } from '../data/cv'
 import { modKey } from '../lib/platform'
+import { useContent, useLanguage, useUi } from '../i18n/context'
 
 type Props = { open: boolean; onClose: () => void }
 
 const tabs = [
-  { id: 'guia', label: 'Cómo navegar', icon: Compass },
-  { id: 'atajos', label: 'Atajos', icon: Keyboard },
-  { id: 'principios', label: 'Principios de diseño', icon: Lightbulb },
+  { id: 'guide', icon: Compass },
+  { id: 'shortcuts', icon: Keyboard },
+  { id: 'principles', icon: Lightbulb },
 ] as const
 
 type TabId = (typeof tabs)[number]['id']
 
 export function HelpDialog({ open, onClose }: Props) {
-  const [tab, setTab] = useState<TabId>('guia')
+  const { lang } = useLanguage()
+  const t = useUi().help
+  const sections = getSections(useContent())
+  const [tab, setTab] = useState<TabId>('guide')
+  const g = t.guide
+  const s = t.shortcuts
 
   return (
-    <Dialog
-      open={open}
-      onClose={onClose}
-      title="Ayuda"
-      description="Todo lo que necesitas para recorrer este portafolio."
-      className="dialog--help"
-    >
-      <div className="tabs" role="tablist" aria-label="Secciones de ayuda">
-        {tabs.map(({ id, label, icon: Icon }) => (
+    <Dialog open={open} onClose={onClose} title={t.title} description={t.desc} className="dialog--help">
+      <div className="tabs" role="tablist" aria-label={t.tabsAria}>
+        {tabs.map(({ id, icon: Icon }) => (
           <button
             key={id}
             type="button"
@@ -39,70 +39,81 @@ export function HelpDialog({ open, onClose }: Props) {
             onClick={() => setTab(id)}
           >
             <Icon size={16} aria-hidden="true" />
-            {label}
+            {t.tabs[id]}
           </button>
         ))}
       </div>
 
       <div className="dialog__body" role="tabpanel" id={`panel-${tab}`} aria-labelledby={`tab-${tab}`}>
-        {tab === 'guia' && (
+        {tab === 'guide' && (
           <div className="help-guide">
             <ol className="help-steps">
               <li>
-                <strong>Usa el menú superior</strong> para saltar a cualquier sección. La sección en la que
-                estás aparece resaltada y la barra fina sobre el menú indica cuánto llevas leído.
+                <strong>{g.nav[0]}</strong> {g.nav[1]}
               </li>
               <li>
-                <strong>Busca rápido</strong> con el botón “Buscar” o con <kbd className="kbd">{modKey}</kbd>{' '}
-                <kbd className="kbd">K</kbd>: escribe “contacto”, “cv” o “tema” y presiona Enter.
+                <strong>{g.searchStrong}</strong> {g.searchBefore} <kbd className="kbd">{modKey}</kbd>{' '}
+                <kbd className="kbd">K</kbd>
+                {g.searchAfter}
               </li>
               <li>
-                <strong>Filtra las habilidades</strong> por categoría o escribe una tecnología para ver si
-                forma parte del perfil.
+                <strong>{g.skills[0]}</strong> {g.skills[1]}
               </li>
               <li>
-                <strong>Contacta sin perder nada:</strong> el formulario guarda un borrador automático en
-                este navegador y abre tu aplicación de correo con el mensaje listo.
+                <strong>{g.contact[0]}</strong> {g.contact[1]}
               </li>
               <li>
-                <strong>Lee a tu manera:</strong> cambia entre tema claro y oscuro con el botón de la luna/sol.
+                <strong>{g.read[0]}</strong> {g.read[1]}
               </li>
             </ol>
           </div>
         )}
 
-        {tab === 'atajos' && (
+        {tab === 'shortcuts' && (
           <table className="shortcuts">
-            <caption className="sr-only">Atajos de teclado disponibles</caption>
+            <caption className="sr-only">{t.shortcutsCaption}</caption>
             <tbody>
               <tr>
-                <th scope="row">Abrir la búsqueda</th>
+                <th scope="row">{s.search}</th>
                 <td>
-                  <kbd className="kbd">{modKey}</kbd> <kbd className="kbd">K</kbd> o <kbd className="kbd">/</kbd>
+                  <kbd className="kbd">{modKey}</kbd> <kbd className="kbd">K</kbd> {s.or}{' '}
+                  <kbd className="kbd">/</kbd>
                 </td>
               </tr>
               <tr>
-                <th scope="row">Abrir esta ayuda</th>
+                <th scope="row">{s.help}</th>
                 <td>
                   <kbd className="kbd">?</kbd>
                 </td>
               </tr>
               <tr>
-                <th scope="row">Cambiar tema claro / oscuro</th>
+                <th scope="row">{s.theme}</th>
                 <td>
                   <kbd className="kbd">T</kbd>
                 </td>
               </tr>
-              {sections.map((s) => (
-                <tr key={s.id}>
-                  <th scope="row">Ir a {s.label}</th>
+              <tr>
+                <th scope="row">{s.language}</th>
+                <td>
+                  <kbd className="kbd">L</kbd>
+                </td>
+              </tr>
+              <tr>
+                <th scope="row">{s.preview}</th>
+                <td>
+                  <kbd className="kbd">V</kbd>
+                </td>
+              </tr>
+              {sections.map((section) => (
+                <tr key={section.id}>
+                  <th scope="row">{s.goTo(section.label)}</th>
                   <td>
-                    <kbd className="kbd">{s.shortcut}</kbd>
+                    <kbd className="kbd">{section.shortcut}</kbd>
                   </td>
                 </tr>
               ))}
               <tr>
-                <th scope="row">Cerrar cualquier ventana</th>
+                <th scope="row">{s.close}</th>
                 <td>
                   <kbd className="kbd">Esc</kbd>
                 </td>
@@ -111,17 +122,14 @@ export function HelpDialog({ open, onClose }: Props) {
           </table>
         )}
 
-        {tab === 'principios' && (
+        {tab === 'principles' && (
           <>
-            <p className="muted help-intro">
-              Este portafolio se diseñó siguiendo las 10 heurísticas de usabilidad de Jakob Nielsen. Así se
-              aplica cada una:
-            </p>
+            <p className="muted help-intro">{t.principlesIntro}</p>
             <ol className="heuristics">
-              {heuristics.map((h) => (
-                <li key={h.number} className="heuristic">
+              {heuristics[lang].map((h, i) => (
+                <li key={h.title} className="heuristic">
                   <span className="heuristic__num" aria-hidden="true">
-                    {String(h.number).padStart(2, '0')}
+                    {String(i + 1).padStart(2, '0')}
                   </span>
                   <div>
                     <h3 className="heuristic__title">{h.title}</h3>

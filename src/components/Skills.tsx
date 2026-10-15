@@ -1,22 +1,19 @@
 import { useMemo, useState } from 'react'
 import { Languages, Search, SearchX, X } from 'lucide-react'
-import { cefrLevels, languages, skillCategories } from '../data/cv'
+import { cefrLevels } from '../data/cv'
 import { normalize } from '../lib/format'
+import { useContent, useUi } from '../i18n/context'
 import { Section } from './Section'
 
-const ALL = 'todas'
-const total = skillCategories.reduce((sum, c) => sum + c.skills.length, 0)
-const everySkill = skillCategories.flatMap((c) => c.skills)
-
-function closestSkill(query: string) {
-  const q = normalize(query)
-  if (q.length < 2) return null
-  return everySkill.find((s) => normalize(s).startsWith(q.slice(0, 2))) ?? null
-}
+const ALL = 'all'
 
 export function Skills() {
+  const t = useUi().skills
+  const { skillCategories, languages } = useContent()
   const [category, setCategory] = useState(ALL)
   const [query, setQuery] = useState('')
+
+  const total = skillCategories.reduce((sum, c) => sum + c.skills.length, 0)
 
   const filtered = useMemo(() => {
     const q = normalize(query)
@@ -24,11 +21,16 @@ export function Skills() {
       .filter((c) => category === ALL || c.id === category)
       .map((c) => ({ ...c, skills: c.skills.filter((s) => !q || normalize(s).includes(q)) }))
       .filter((c) => c.skills.length > 0)
-  }, [category, query])
+  }, [skillCategories, category, query])
 
   const shown = filtered.reduce((sum, c) => sum + c.skills.length, 0)
   const isFiltering = category !== ALL || query !== ''
-  const suggestion = shown === 0 ? closestSkill(query) : null
+
+  const suggestion = useMemo(() => {
+    const q = normalize(query)
+    if (shown > 0 || q.length < 2) return null
+    return skillCategories.flatMap((c) => c.skills).find((s) => normalize(s).startsWith(q.slice(0, 2))) ?? null
+  }, [skillCategories, query, shown])
 
   const reset = () => {
     setCategory(ALL)
@@ -36,22 +38,16 @@ export function Skills() {
   }
 
   return (
-    <Section
-      id="habilidades"
-      index="03"
-      eyebrow="Habilidades"
-      title="Competencias técnicas"
-      description="Filtra por categoría o busca una tecnología específica."
-    >
+    <Section id="habilidades" index="03" eyebrow={t.eyebrow} title={t.title} description={t.desc}>
       <div className="skills-toolbar" data-reveal>
-        <div className="filter-group" role="group" aria-label="Filtrar por categoría">
+        <div className="filter-group" role="group" aria-label={t.filterGroup}>
           <button
             type="button"
             className="chip chip--filter"
             aria-pressed={category === ALL}
             onClick={() => setCategory(ALL)}
           >
-            Todas <span className="chip__count">{total}</span>
+            {t.all} <span className="chip__count">{total}</span>
           </button>
           {skillCategories.map((c) => (
             <button
@@ -69,12 +65,12 @@ export function Skills() {
         <div className="search-field">
           <Search size={18} aria-hidden="true" />
           <label htmlFor="skill-search" className="sr-only">
-            Buscar tecnología
+            {t.searchLabel}
           </label>
           <input
             id="skill-search"
             type="search"
-            placeholder="Buscar tecnología, p. ej. React"
+            placeholder={t.placeholder}
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={(e) => e.key === 'Escape' && query && (e.stopPropagation(), setQuery(''))}
@@ -82,7 +78,12 @@ export function Skills() {
             spellCheck={false}
           />
           {query && (
-            <button type="button" className="icon-btn icon-btn--sm" onClick={() => setQuery('')} aria-label="Borrar búsqueda">
+            <button
+              type="button"
+              className="icon-btn icon-btn--sm"
+              onClick={() => setQuery('')}
+              aria-label={t.clearSearch}
+            >
               <X size={16} aria-hidden="true" />
             </button>
           )}
@@ -90,10 +91,10 @@ export function Skills() {
       </div>
 
       <p className="skills-status" role="status">
-        Mostrando <strong>{shown}</strong> de {total} tecnologías
+        {t.showing} <strong>{shown}</strong> {t.of} {total} {t.technologies}
         {isFiltering && (
           <button type="button" className="link-btn" onClick={reset}>
-            Quitar filtros
+            {t.removeFilters}
           </button>
         )}
       </p>
@@ -119,13 +120,13 @@ export function Skills() {
         <div className="empty-state card">
           <SearchX size={28} aria-hidden="true" />
           <p>
-            <strong>“{query}”</strong> no aparece
-            {category !== ALL && ' en esta categoría'}.
+            <strong>“{query}”</strong> {t.notFound}
+            {category !== ALL && t.inCategory}.
           </p>
           <p className="muted">
             {suggestion ? (
               <>
-                ¿Buscabas{' '}
+                {t.didYouMean}{' '}
                 <button
                   type="button"
                   className="link-btn"
@@ -139,11 +140,11 @@ export function Skills() {
                 ?
               </>
             ) : (
-              'Revisa la ortografía o busca en todas las categorías.'
+              t.checkSpelling
             )}
           </p>
           <button type="button" className="btn btn--secondary btn--sm" onClick={reset}>
-            Ver todas las tecnologías
+            {t.seeAll}
           </button>
         </div>
       )}
@@ -151,7 +152,7 @@ export function Skills() {
       <article className="card languages" data-reveal aria-labelledby="languages-title">
         <h3 id="languages-title" className="skill-group__title">
           <Languages size={18} aria-hidden="true" />
-          Idiomas
+          {t.languages}
         </h3>
         <ul className="language-list">
           {languages.map((lang) => (
@@ -162,14 +163,13 @@ export function Skills() {
               </div>
               {!lang.cefr && (
                 <div className="cefr cefr--native" aria-hidden="true">
-                  <span className="cefr__step cefr__step--done">Lengua materna</span>
+                  <span className="cefr__step cefr__step--done">{t.native}</span>
                 </div>
               )}
               {lang.cefr && (
-                <ol className="cefr" aria-label={`Escala MCER: nivel ${lang.cefr.reached} alcanzado, ${lang.cefr.inProgress} en curso`}>
-                  {cefrLevels.map((level) => {
+                <ol className="cefr" aria-label={t.cefrAria(lang.cefr.reached, lang.cefr.inProgress)}>
+                  {cefrLevels.map((level, i) => {
                     const reachedIndex = cefrLevels.indexOf(lang.cefr!.reached)
-                    const i = cefrLevels.indexOf(level)
                     const state =
                       i <= reachedIndex ? 'done' : level === lang.cefr!.inProgress ? 'progress' : 'todo'
                     return (
@@ -184,9 +184,9 @@ export function Skills() {
           ))}
         </ul>
         <p className="languages__legend muted" aria-hidden="true">
-          <span className="legend legend--done" /> Alcanzado
-          <span className="legend legend--progress" /> En curso
-          <span className="legend legend--todo" /> Próximo
+          <span className="legend legend--done" /> {t.legendDone}
+          <span className="legend legend--progress" /> {t.legendProgress}
+          <span className="legend legend--todo" /> {t.legendTodo}
         </p>
       </article>
     </Section>
